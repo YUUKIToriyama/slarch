@@ -4,18 +4,22 @@ import { Message as ResponseMessage } from "@slack/web-api/dist/response/Convers
 interface User {
 	userId: string
 	name: string
+	realName: string
 }
 
 interface Message {
 	timestamp: string
 	userId: string
 	userName: string
+	userRealName: string
 	text: string
 }
 
 export interface SlarchSettings {
+	/** [Features] -> [OAuth & Permissions] -> [OAuth Tokens for Your Workspace] -> [Bot User OAuth Token] */
 	BOT_USER_OAUTH_TOKEN: string
 }
+
 export class Slarch {
 	webClient: WebClient
 	userList: User[]
@@ -25,30 +29,40 @@ export class Slarch {
 		this.userList = []
 	}
 
-	private resolveUserName = async (userId: string) => {
+	private resolveUserInfo = async (userId: string): Promise<User | undefined> => {
 		const user = await this.webClient.users.info({
 			user: userId
 		}).then(result => result.user)
-		if (user === undefined || user.id === undefined || user.name === undefined) {
+		if (user === undefined) {
 			return
 		}
-		this.userList.push({
-			userId: user.id,
-			name: user.name
-		})
-		return user.name
+		const result: User = {
+			userId: userId,
+			name: user.name || "",
+			realName: user.real_name || ""
+		}
+		this.userList.push(result)
+		return result
 	}
 
-	private getUserName = (userId: string) => {
-		const user = this.userList.find(elem => elem.userId === userId)
-		return user !== undefined ? user.name : undefined
+	private getUserInfo = (userId: string): User | undefined => {
+		return this.userList.find(elem => elem.userId === userId)
 	}
 
+	/**
+	 * Botから見えるチャンネルの一覧を取得します
+	 * @returns チャンネル一覧
+	 */
 	getChannels = async () => {
 		const channels = await this.webClient.conversations.list().then(result => result.channels)
 		return channels
 	}
 
+	/**
+	 * 指定したチャンネルのメッセージ一覧を取得します
+	 * @param channelId 
+	 * @returns メッセージ一覧
+	 */
 	archiveMessages = async (channelId: string) => {
 		let messages: Message[] = []
 		let hasMore: Boolean | undefined = true
@@ -87,18 +101,19 @@ export class Slarch {
 		return messages
 	}
 
-	private convertMessage = async (message: ResponseMessage) => {
+	private convertMessage = async (message: ResponseMessage): Promise<Message> => {
 		// Unix Time -> 日本標準時
 		const dateTime = new Date(parseFloat(message.ts as string) * 1000)
-		// userId -> userName
-		let userName = this.getUserName(message.user as string)
-		if (userName === undefined) {
-			userName = await this.resolveUserName(message.user as string).catch(error => "hoge")
+		// userId -> ユーザ情報
+		let userInfo = this.getUserInfo(message.user as string)
+		if (userInfo === undefined) {
+			userInfo = await this.resolveUserInfo(message.user as string)
 		}
 		return {
 			timestamp: dateTime.toLocaleString("ja-JP"),
 			userId: message.user || "",
-			userName: userName || "",
+			userName: userInfo?.name || "",
+			userRealName: userInfo?.realName || "",
 			text: message.text || ""
 		}
 	}
