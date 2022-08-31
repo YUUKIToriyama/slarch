@@ -1,15 +1,13 @@
-import { WebClient } from "@slack/web-api"
 import "dotenv/config"
+import { Slarch, SlarchSettings } from './Slarch'
 
-const webClient = new WebClient(process.env["BOT_USER_OAUTH_TOKEN"]);
+const settings: SlarchSettings = {
+	BOT_USER_OAUTH_TOKEN: process.env["BOT_USER_OAUTH_TOKEN"] as string
+};
 
 (async () => {
-	// チャンネル一覧を取得
-	const channels = await webClient.conversations.list().then(result => result.channels)
-	if (channels === undefined) {
-		return
-	}
-	for (let channel of channels) {
-		console.log(`${channel.id}: ${channel.name}`)
-	}
+	const slarch = new Slarch(settings)
+	const channelId = "C04067H8BGD"
+	const messages = await slarch.archiveMessages(channelId)
+	console.log(messages)
 })()
