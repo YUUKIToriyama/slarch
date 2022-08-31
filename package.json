@@ -2,10 +2,11 @@
     "name": "slarch",
     "version": "0.0.1",
     "description": "Slackの過去ログを保存します",
-    "main": "dist/main.js",
+    "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
-        "dev": "ts-node src/main.ts"
+        "dev": "ts-node src/main.ts",
+        "prepublishOnly": "rm -rf ./dist && npm run build"
     },
     "repository": {
         "type": "git",
@@ -25,7 +26,6 @@
         "typescript": "^4.8.2"
     },
     "dependencies": {
-        "@slack/web-api": "^6.7.2",
-        "dotenv": "^16.0.1"
+        "@slack/web-api": "^6.7.2"
     }
 }
